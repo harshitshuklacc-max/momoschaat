@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,6 +12,7 @@ import {
   X,
   Heart,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,8 +82,16 @@ export function Header() {
       <header className="sticky top-0 z-40 glass border-b border-white/10">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between gap-4">
-            <Link href="/" className="shrink-0">
-              <span className="text-xl font-bold tracking-tight">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
+              <Image
+                src={STORE.logo}
+                alt={STORE.name}
+                width={40}
+                height={40}
+                className="rounded-full"
+                priority
+              />
+              <span className="hidden text-xl font-bold tracking-tight sm:inline">
                 <span className="text-gradient">{STORE.name}</span>
               </span>
             </Link>
@@ -159,6 +169,18 @@ export function Header() {
               )}
 
               <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="hidden border-primary/40 text-primary hover:bg-primary/10 md:inline-flex"
+              >
+                <Link href="/admin/login">
+                  <Shield className="mr-1.5 h-4 w-4" />
+                  Admin
+                </Link>
+              </Button>
+
+              <Button
                 variant="ghost"
                 size="icon"
                 className="md:hidden"
@@ -229,6 +251,13 @@ export function Header() {
                 Login / Register
               </Link>
             )}
+            <Link
+              href="/admin/login"
+              className="py-2 text-sm text-primary hover:text-primary/80"
+              onClick={() => setMobileOpen(false)}
+            >
+              Admin Portal
+            </Link>
           </nav>
         </div>
       </header>

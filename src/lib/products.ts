@@ -81,6 +81,22 @@ export function buildProductOrderBy(
   }
 }
 
+export function parseProductSearchParams(
+  params: Record<string, string | undefined>
+): ProductQueryParams {
+  return {
+    page: params.page ? parseInt(params.page, 10) : 1,
+    limit: params.limit ? parseInt(params.limit, 10) : undefined,
+    search: params.search,
+    brand: params.brand,
+    category: params.category,
+    gender: params.gender,
+    minPrice: params.minPrice ? parseFloat(params.minPrice) : undefined,
+    maxPrice: params.maxPrice ? parseFloat(params.maxPrice) : undefined,
+    sort: params.sort,
+  };
+}
+
 export async function queryProducts(params: ProductQueryParams) {
   const page = Math.max(1, params.page ?? 1);
   const limit = Math.min(

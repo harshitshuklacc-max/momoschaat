@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { STORE } from "@/lib/constants";
 import type { HeroBannerData } from "@/lib/types";
 
 interface HeroSectionProps {
@@ -27,12 +28,26 @@ export function HeroSection({ banners }: HeroSectionProps) {
     return (
       <section className="relative h-[50vh] min-h-[400px] flex items-center justify-center glass">
         <div className="text-center px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mx-auto mb-6"
+          >
+            <Image
+              src={STORE.logo}
+              alt={STORE.name}
+              width={140}
+              height={140}
+              className="mx-auto rounded-full shadow-2xl shadow-primary/20"
+              priority
+            />
+          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl sm:text-6xl font-bold"
           >
-            Welcome to <span className="text-gradient">SHOE MAFIA</span>
+            Welcome to <span className="text-gradient">{STORE.name}</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}

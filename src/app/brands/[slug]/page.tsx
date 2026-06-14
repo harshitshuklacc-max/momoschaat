@@ -3,19 +3,32 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { ProductGrid } from "@/components/products/product-grid";
 import { STORE } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
+import { parseProductSearchParams, queryProducts } from "@/lib/products";
+import { serializeBrand } from "@/lib/serializers";
 
-async function getBrand(slug: string, searchParams: Record<string, string | undefined>) {
-  const params = new URLSearchParams();
-  Object.entries(searchParams).forEach(([k, v]) => {
-    if (v) params.set(k, v);
+async function getBrandData(
+  slug: string,
+  searchParams: Record<string, string | undefined>
+) {
+  const brand = await prisma.brand.findUnique({
+    where: { slug, isActive: true },
+    include: {
+      _count: { select: { products: { where: { status: "ACTIVE" } } } },
+    },
   });
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/brands/${slug}?${params}`, {
-    next: { revalidate: 30 },
+
+  if (!brand) return null;
+
+  const products = await queryProducts({
+    ...parseProductSearchParams(searchParams),
+    brand: slug,
   });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Failed to fetch brand");
-  return res.json();
+
+  return {
+    brand: serializeBrand(brand),
+    ...products,
+  };
 }
 
 export async function generateMetadata({
@@ -24,7 +37,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const data = await getBrand(slug, {});
+  const data = await getBrandData(slug, {});
   if (!data) return { title: "Brand Not Found" };
 
   return {
@@ -35,6 +48,8 @@ export async function generateMetadata({
   };
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function BrandPage({
   params,
   searchParams,
@@ -44,7 +59,7 @@ export default async function BrandPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const data = await getBrand(slug, sp);
+  const data = await getBrandData(slug, sp);
 
   if (!data) notFound();
 

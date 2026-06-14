@@ -5,25 +5,14 @@ import { ProductFilters } from "@/components/products/product-filters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import type { ProductsResponse } from "@/lib/types";
+import { parseProductSearchParams, queryProducts } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "Shop All Products",
   description: "Browse our complete collection of premium footwear at SHOE MAFIA, Bilaspur.",
 };
 
-async function getProducts(searchParams: Record<string, string | undefined>) {
-  const params = new URLSearchParams();
-  Object.entries(searchParams).forEach(([k, v]) => {
-    if (v) params.set(k, v);
-  });
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/products?${params}`, {
-    next: { revalidate: 30 },
-  });
-  if (!res.ok) throw new Error("Failed to fetch products");
-  return res.json() as Promise<ProductsResponse>;
-}
+export const dynamic = "force-dynamic";
 
 export default async function ProductsPage({
   searchParams,
@@ -31,7 +20,7 @@ export default async function ProductsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const data = await getProducts(params);
+  const data = await queryProducts(parseProductSearchParams(params));
   const totalPages = Math.ceil(data.total / data.limit);
 
   return (

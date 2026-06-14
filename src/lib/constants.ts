@@ -1,5 +1,6 @@
 export const STORE = {
   name: process.env.NEXT_PUBLIC_STORE_NAME || "SHOE MAFIA",
+  logo: "/images/logo.png",
   phone: process.env.NEXT_PUBLIC_STORE_PHONE || "07587555558",
   address: {
     line1: "Bus Stand, Old Telephone Exchange Road",

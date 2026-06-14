@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, Phone, MessageCircle } from "lucide-react";
 import { STORE } from "@/lib/constants";
 import { Separator } from "@/components/ui/separator";
@@ -11,7 +12,16 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h3 className="text-lg font-bold text-gradient">{STORE.name}</h3>
+            <Link href="/" className="inline-flex items-center gap-2">
+              <Image
+                src={STORE.logo}
+                alt={STORE.name}
+                width={36}
+                height={36}
+                className="rounded-full"
+              />
+              <h3 className="text-lg font-bold text-gradient">{STORE.name}</h3>
+            </Link>
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
               Premium luxury footwear in Bilaspur. Step into style with the finest
               collection of shoes for every occasion.
@@ -88,9 +98,9 @@ export function Footer() {
           <p>&copy; {currentYear} {STORE.name}. All rights reserved.</p>
           <Link
             href="/admin/login"
-            className="text-xs opacity-40 hover:opacity-70 transition-opacity"
+            className="text-xs text-primary/70 hover:text-primary transition-colors"
           >
-            Admin
+            Admin Portal
           </Link>
         </div>
       </div>

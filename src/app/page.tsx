@@ -11,7 +11,8 @@ import { BrandsSection } from "@/components/home/brands-section";
 import { ReviewsSection } from "@/components/home/reviews-section";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { MapPin, Phone } from "lucide-react";
+import Image from "next/image";
+import { MapPin, Phone, Shield } from "lucide-react";
 import { STORE } from "@/lib/constants";
 import { getHomepageData } from "@/lib/homepage";
 
@@ -140,6 +141,32 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <section className="py-10 border-t border-white/10">
+        <div className="container mx-auto px-4">
+          <div className="glass-card mx-auto flex max-w-md flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
+            <Image
+              src={STORE.logo}
+              alt={STORE.name}
+              width={72}
+              height={72}
+              className="rounded-full"
+            />
+            <div className="flex-1">
+              <h3 className="font-semibold">Store Admin Portal</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Manage products, inventory, orders, and POS from the admin dashboard.
+              </p>
+            </div>
+            <Button variant="outline" className="border-primary/40 text-primary shrink-0" asChild>
+              <Link href="/admin/login">
+                <Shield className="mr-2 h-4 w-4" />
+                Admin Login
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

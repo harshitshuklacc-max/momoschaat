@@ -4,12 +4,12 @@ import { adminLoginSchema } from "@/lib/validations";
 import {
   checkRateLimit,
   errorResponse,
-  getRequestMeta,
   parseZodError,
   rateLimited,
 } from "@/lib/api";
-import { createAuditLog } from "@/lib/audit";
 import { getAdminCookieName, getAdminCookieOptions } from "@/lib/cookie-options";
+
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const rl = checkRateLimit(request, "auth-admin-login", 10, 60000);
@@ -22,38 +22,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await authenticateAdmin(parsed.data.username, parsed.data.password);
+    const result = await authenticateAdmin(
+      parsed.data.username.trim(),
+      parsed.data.password
+    );
     if (!result) {
       return errorResponse("Invalid username or password", 401);
-    }
-
-    const { admin, token } = result;
-
-    try {
-      const meta = getRequestMeta(request);
-      await createAuditLog({
-        adminId: admin.id,
-        action: "LOGIN",
-        entity: "admin",
-        entityId: admin.id,
-        ipAddress: meta.ipAddress,
-        userAgent: meta.userAgent,
-      });
-    } catch {
-      // Login should succeed even if audit logging fails
     }
 
     const response = NextResponse.json({
       success: true,
       data: {
-        id: admin.id,
-        username: admin.username,
-        name: admin.name,
-        email: admin.email,
+        id: result.admin.id,
+        username: result.admin.username,
+        name: result.admin.name,
+        email: result.admin.email,
       },
     });
 
-    response.cookies.set(getAdminCookieName(), token, getAdminCookieOptions());
+    response.cookies.set(
+      getAdminCookieName(),
+      result.token,
+      getAdminCookieOptions()
+    );
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login failed";

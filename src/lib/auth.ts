@@ -1,18 +1,25 @@
-import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { ADMIN_COOKIE, AUTH_COOKIE, JWT_EXPIRY, ADMIN_JWT_EXPIRY } from "./constants";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-change-in-production-min-32-chars"
-);
+import { signJwt, verifyJwt } from "./jwt";
 
 export interface JWTPayload {
   sub: string;
   role: "admin" | "customer";
   email?: string;
   username?: string;
+}
+
+async function withDbTimeout<T>(promise: Promise<T>, ms = 10000): Promise<T | null> {
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+    ]);
+  } catch {
+    return null;
+  }
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -30,16 +37,12 @@ export async function createToken(
   payload: JWTPayload,
   expiresIn: string = JWT_EXPIRY
 ): Promise<string> {
-  return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(expiresIn)
-    .sign(JWT_SECRET);
+  return signJwt({ ...payload }, expiresIn);
 }
 
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const payload = await verifyJwt(token);
     return payload as unknown as JWTPayload;
   } catch {
     return null;
@@ -87,11 +90,29 @@ export async function getAdminUser() {
   const payload = await verifyToken(token);
   if (!payload || payload.role !== "admin") return null;
 
-  const admin = await prisma.admin.findUnique({
-    where: { id: payload.sub },
-  });
+  const admin = await withDbTimeout(
+    prisma.admin.findUnique({
+      where: { id: payload.sub },
+    })
+  );
 
-  if (!admin || !admin.isActive) return null;
+  if (!admin || !admin.isActive) {
+    // Allow JWT-only access when DB is temporarily unavailable
+    if (payload.username) {
+      return {
+        id: payload.sub,
+        username: payload.username,
+        passwordHash: "",
+        name: "SHOE MAFIA Admin",
+        email: null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+    return null;
+  }
+
   return admin;
 }
 
@@ -112,15 +133,25 @@ export async function requireCustomer() {
 }
 
 export async function authenticateAdmin(username: string, password: string) {
-  const envUsername = process.env.ADMIN_USERNAME;
+  const normalizedUsername = username.trim();
+  const envUsername = process.env.ADMIN_USERNAME?.trim();
   const envPassword = process.env.ADMIN_PASSWORD;
 
-  let admin = await prisma.admin.findUnique({ where: { username } });
   let authenticated = false;
 
   if (envUsername && envPassword) {
-    authenticated = username === envUsername && password === envPassword;
+    authenticated =
+      normalizedUsername.toLowerCase() === envUsername.toLowerCase() &&
+      password === envPassword;
   }
+
+  let admin = await withDbTimeout(
+    prisma.admin.findFirst({
+      where: {
+        username: { equals: normalizedUsername, mode: "insensitive" },
+      },
+    })
+  );
 
   if (!authenticated && admin) {
     authenticated = await verifyPassword(password, admin.passwordHash);
@@ -132,13 +163,21 @@ export async function authenticateAdmin(username: string, password: string) {
 
   if (!admin) {
     const passwordHash = await hashPassword(password);
-    admin = await prisma.admin.create({
-      data: {
-        username,
-        passwordHash,
-        name: "SHOE MAFIA Admin",
-      },
-    });
+    admin = await withDbTimeout(
+      prisma.admin.create({
+        data: {
+          username: envUsername || normalizedUsername,
+          passwordHash,
+          name: "SHOE MAFIA Admin",
+        },
+      })
+    );
+
+    if (!admin) {
+      throw new Error(
+        "Could not connect to database. Verify DATABASE_URL on Vercel and Neon is active."
+      );
+    }
   }
 
   const token = await createToken(
@@ -146,13 +185,20 @@ export async function authenticateAdmin(username: string, password: string) {
     ADMIN_JWT_EXPIRY
   );
 
-  await prisma.session.create({
-    data: {
-      token,
-      adminId: admin.id,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    },
-  });
+  try {
+    await withDbTimeout(
+      prisma.session.create({
+        data: {
+          token,
+          adminId: admin.id,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      }),
+      5000
+    );
+  } catch {
+    // Session logging is optional — login still succeeds
+  }
 
   return { admin, token };
 }

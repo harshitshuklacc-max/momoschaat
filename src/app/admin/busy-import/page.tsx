@@ -5,7 +5,7 @@ import { Upload, FileText, CheckCircle, XCircle, AlertCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { adminUpload } from "@/lib/api-client";
+import { adminUpload, adminFetch } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateTime } from "@/lib/utils";
 
@@ -39,9 +39,8 @@ export default function BusyImportPage() {
   const { toast } = useToast();
 
   const loadHistory = async () => {
-    const res = await fetch("/api/busy-import");
-    const json = await res.json();
-    if (json.success) setHistory(json.data);
+    const res = await adminFetch<ImportLog[]>("/api/busy-import");
+    if (res.success && res.data) setHistory(res.data);
   };
 
   useEffect(() => { loadHistory(); }, []);
@@ -56,10 +55,15 @@ export default function BusyImportPage() {
 
     if (res.success && res.data) {
       setResult(res.data);
-      toast({ title: `Import complete: ${res.data.added} added, ${res.data.updated} updated` });
+      toast({
+        title: `Import complete: ${res.data.added} added, ${res.data.updated} updated`,
+      });
       loadHistory();
     } else {
-      toast({ title: res.error || "Import failed", variant: "destructive" });
+      toast({
+        title: res.error || "Import failed",
+        variant: "destructive",
+      });
     }
   };
 

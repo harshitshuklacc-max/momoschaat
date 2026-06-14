@@ -111,21 +111,24 @@ export async function requireCustomer() {
   return { user, customer: user.customer };
 }
 
-export async function adminLogin(username: string, password: string) {
+export async function authenticateAdmin(username: string, password: string) {
   const envUsername = process.env.ADMIN_USERNAME;
   const envPassword = process.env.ADMIN_PASSWORD;
 
-  if (!envUsername || !envPassword) {
-    throw new Error("Admin credentials not configured");
+  let admin = await prisma.admin.findUnique({ where: { username } });
+  let authenticated = false;
+
+  if (envUsername && envPassword) {
+    authenticated = username === envUsername && password === envPassword;
   }
 
-  if (username !== envUsername || password !== envPassword) {
+  if (!authenticated && admin) {
+    authenticated = await verifyPassword(password, admin.passwordHash);
+  }
+
+  if (!authenticated) {
     return null;
   }
-
-  let admin = await prisma.admin.findUnique({
-    where: { username },
-  });
 
   if (!admin) {
     const passwordHash = await hashPassword(password);
@@ -151,8 +154,15 @@ export async function adminLogin(username: string, password: string) {
     },
   });
 
-  await setAuthCookie(token, true);
-  return admin;
+  return { admin, token };
+}
+
+export async function adminLogin(username: string, password: string) {
+  const result = await authenticateAdmin(username, password);
+  if (!result) return null;
+
+  await setAuthCookie(result.token, true);
+  return result.admin;
 }
 
 export async function customerRegister(data: {

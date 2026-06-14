@@ -119,7 +119,19 @@ async function main() {
     });
   }
 
-  console.log("Seed completed: admin, homepage sections, settings initialized.");
+  await prisma.brand.upsert({
+    where: { slug: "busy-import" },
+    update: { isActive: true },
+    create: { name: "Busy Import", slug: "busy-import", isActive: true },
+  });
+
+  await prisma.category.upsert({
+    where: { slug: "uncategorized" },
+    update: { isActive: true },
+    create: { name: "Uncategorized", slug: "uncategorized", isActive: true },
+  });
+
+  console.log("Seed completed: admin, homepage sections, settings, brand/category initialized.");
 }
 
 main()
